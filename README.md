@@ -1,0 +1,2 @@
+# rust-challenge
+Rust Challenge
