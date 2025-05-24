@@ -1,0 +1,46 @@
+version: '3.8'
+
+services:
+  clickhouse:
+    image: docker.io/clickhouse/clickhouse-server:latest
+    ports:
+      - "8123:8123"   # HTTP интерфейс
+      - "8124:8124"   # HTTP интерфейс с поддержкой HTTPS (редко нужен)
+      - "9000:9000"   # TCP интерфейс для клиента ClickHouse (нужен нам)
+    volumes:
+      - clickhouse_data:/var/lib/clickhouse
+    environment:
+      CLICKHOUSE_DB: default
+      CLICKHOUSE_USER: default
+      CLICKHOUSE_PASSWORD: ""
+      CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT: "1"
+    healthcheck:
+      test: ["CMD", "clickhouse-client", "--query", "SELECT 1"]
+      interval: 5s
+      timeout: 10s
+      retries: 5
+    networks:
+      - appnet
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: app
+    depends_on:
+      clickhouse:
+        condition: service_healthy
+    environment:
+      CLICKHOUSE_URL: "tcp://clickhouse:9000"
+    volumes:
+      - ./config:/app/config
+    restart: unless-stopped
+    networks:
+      - appnet
+
+volumes:
+  clickhouse_data:
+
+networks:
+  appnet:
+    driver: bridge
