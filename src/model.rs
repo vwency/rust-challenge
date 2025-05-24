@@ -15,4 +15,7 @@ pub struct UserStats {
     pub avg_buy_price: f64,
     pub avg_sell_price: f64,
     pub max_balance: f64,
+    pub max_balance_1h: f64,    // Максимальный баланс за 1 час
+    pub max_balance_24h: f64,   // Максимальный баланс за 24 часа
+    pub max_balance_7d: f64,    // Максимальный баланс за 7 дней
 }

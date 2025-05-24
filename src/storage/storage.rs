@@ -1,7 +1,7 @@
 use crate::model::{Transfer, UserStats};
-use clickhouse_rs::{Pool, types::Block};
-use thiserror::Error;
+use clickhouse_rs::{types::Block, Pool};
 use std::sync::Mutex;
+use thiserror::Error;
 
 #[derive(Debug)]
 pub struct ClickHouseStorage {
@@ -107,9 +107,6 @@ impl ClickHouseStorage {
 }
 
 
-
-
-
 #[async_trait::async_trait]
 impl Storage for ClickHouseStorage {
     async fn save_transfers(&self, transfers: &[Transfer]) -> Result<(), StorageError> {
@@ -200,6 +197,9 @@ impl Storage for ClickHouseStorage {
                 avg_buy_price,
                 avg_sell_price,
                 max_balance,
+                max_balance_1h: 0.0,
+                max_balance_24h: 0.0,
+                max_balance_7d: 0.0,
             });
         }
 
