@@ -1,7 +1,8 @@
 use crate::model::Transfer;
-use rand::{distributions::Alphanumeric, Rng};
+use rand::Rng;
 use std::time::{SystemTime, UNIX_EPOCH};
 use crate::generator::config::TransferGenConfig;
+use crate::generator::address::rand_address;
 
 pub trait TransferGenerator {
     fn generate(&self, count: usize) -> Vec<Transfer>;
@@ -43,15 +44,6 @@ impl TransferGenerator for DefaultTransferGenerator {
             })
             .collect()
     }
-}
-
-fn rand_address(rng: &mut impl Rng) -> String {
-    let suffix: String = rng
-        .sample_iter(&Alphanumeric)
-        .take(40)
-        .map(char::from)
-        .collect();
-    format!("0x{}", suffix)
 }
 
 pub fn generate_transfers(count: usize) -> Vec<Transfer> {
