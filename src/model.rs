@@ -8,7 +8,6 @@ pub struct Transfer {
     pub amount: f64,
     pub usd_price: f64,
 }
-
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UserStats {
     pub address: String,
