@@ -1,23 +1,12 @@
 use crate::model::{Transfer, UserStats};
 use clickhouse_rs::{types::Block, Pool};
-use thiserror::Error;
-use crate::storage::Storage;
+use crate::storage::{Storage, errors::StorageError};  // Импортируем ошибку из errors.rs
 use async_trait::async_trait;
 use anyhow::Context;
 
 #[derive(Debug)]
 pub struct ClickHouseStorage {
     pub pool: Pool,
-}
-
-#[derive(Error, Debug)]
-pub enum StorageError {
-    #[error("ClickHouse error: {0}")]
-    ClickHouse(#[from] clickhouse_rs::errors::Error),
-
-    #[allow(dead_code)]
-    #[error("Storage error: {0}")]
-    Generic(String),
 }
 
 impl ClickHouseStorage {

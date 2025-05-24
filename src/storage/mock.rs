@@ -1,5 +1,5 @@
 use crate::model::{Transfer, UserStats};
-use crate::storage::{Storage, StorageError};
+use crate::storage::{Storage, errors::StorageError};
 use async_trait::async_trait;
 use std::sync::Mutex;
 
@@ -23,22 +23,23 @@ impl MockStorage {
 impl Storage for MockStorage {
     async fn save_transfers(&self, transfers: &[Transfer]) -> Result<(), StorageError> {
         println!("MockStorage: сохраняем {} трансферов", transfers.len());
-        *self.transfers.lock().unwrap() = transfers.to_vec();
+        *self.transfers.lock().map_err(|e| StorageError::Generic(format!("Ошибка блокировки мьютекса transfers: {}", e)))? = transfers.to_vec();
         Ok(())
     }
 
     async fn save_stats(&self, stats: &[UserStats]) -> Result<(), StorageError> {
         println!("MockStorage: сохраняем {} записей статистики", stats.len());
-        let mut locked_stats = self.stats.lock().unwrap();
+        let mut locked_stats = self.stats.lock().map_err(|e| StorageError::Generic(format!("Ошибка блокировки мьютекса stats: {}", e)))?;
         *locked_stats = stats.to_vec();
-        locked_stats.sort_by(|a, b| b.total_volume.partial_cmp(&a.total_volume).unwrap());
+        locked_stats.sort_by(|a, b| b.total_volume.partial_cmp(&a.total_volume).unwrap_or(std::cmp::Ordering::Equal));
         Ok(())
     }
 
     async fn get_stats(&self) -> anyhow::Result<Vec<UserStats>> {
-        let stats = self.stats.lock().unwrap();
+        let stats = self.stats.lock()
+            .map_err(|e| StorageError::Generic(format!("Ошибка блокировки мьютекса stats: {}", e)))
+            .map_err(|e| anyhow::anyhow!(e))?;  // Приводим StorageError в anyhow::Error
         println!("MockStorage: возвращаем {} записей статистики", stats.len());
         Ok(stats.clone())
     }
 }
-

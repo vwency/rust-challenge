@@ -1,7 +1,9 @@
-mod clickhouse;
-mod mock;
+pub mod clickhouse;
+pub mod mock;
+pub mod errors;
 
-pub use clickhouse::{ClickHouseStorage, StorageError};
+pub use clickhouse::ClickHouseStorage;
+pub use errors::StorageError;
 pub use mock::MockStorage;
 
 use async_trait::async_trait;
