@@ -34,7 +34,6 @@ pub fn calculate_user_stats(transfers: &[Transfer]) -> Vec<UserStats> {
         sell_prices.entry(t.from.clone()).or_default().push((t.usd_price, t.amount));
     }
 
-    // Вторая проходка для истории балансов
     let mut balance_history: HashMap<String, Vec<(u64, f64)>> = HashMap::new();
     let mut current_balances: HashMap<String, f64> = HashMap::new();
 
@@ -53,7 +52,6 @@ pub fn calculate_user_stats(transfers: &[Transfer]) -> Vec<UserStats> {
             .push((t.ts, current_balances[&t.to]));
     }
 
-    // Вычисление max балансов для периодов
     for (addr, history) in balance_history {
         let history_dt: Vec<(DateTime<Utc>, f64)> = history
             .into_iter()

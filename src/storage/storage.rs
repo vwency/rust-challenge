@@ -42,7 +42,6 @@ impl ClickHouseStorage {
             }
         };
 
-        // Проверяем существование базы данных
         match client.query("SHOW DATABASES").fetch_all().await {
             Ok(block) => {
                 println!("Доступные базы данных:");
@@ -57,7 +56,6 @@ impl ClickHouseStorage {
             }
         }
 
-        // Проверяем существование таблиц
         match client.query("SHOW TABLES FROM default").fetch_all().await {
             Ok(block) => {
                 println!("Таблицы в базе default:");
@@ -72,7 +70,6 @@ impl ClickHouseStorage {
             }
         }
 
-        // Создаем таблицы, если их нет
         println!("Создаем таблицу transfers...");
         if let Err(e) = client.execute("
             CREATE TABLE IF NOT EXISTS default.transfers (
