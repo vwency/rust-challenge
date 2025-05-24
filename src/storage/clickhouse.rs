@@ -3,6 +3,7 @@ use clickhouse_rs::{types::Block, Pool};
 use thiserror::Error;
 use crate::storage::Storage;
 use async_trait::async_trait;
+use anyhow::Context;
 
 #[derive(Debug)]
 pub struct ClickHouseStorage {
@@ -89,26 +90,28 @@ impl Storage for ClickHouseStorage {
         Ok(())
     }
 
-    async fn get_stats(&self) -> Result<Vec<UserStats>, StorageError> {
-        let mut client = self.pool.get_handle().await?;
+    async fn get_stats(&self) -> anyhow::Result<Vec<UserStats>> {
+        let mut client = self.pool.get_handle().await
+            .context("Failed to get database handle")?;
         let block = client
             .query("SELECT address, total_volume, avg_buy_price, avg_sell_price, max_balance, max_balance_1h, max_balance_24h, max_balance_7d FROM user_stats ORDER BY total_volume DESC")
             .fetch_all()
-            .await?;
+            .await
+            .context("Failed to execute query")?;
 
         let rows = block.rows();
         let mut stats = Vec::new();
 
         for row in rows {
             stats.push(UserStats {
-                address: row.get("address").unwrap(),
-                total_volume: row.get("total_volume").unwrap(),
-                avg_buy_price: row.get("avg_buy_price").unwrap(),
-                avg_sell_price: row.get("avg_sell_price").unwrap(),
-                max_balance: row.get("max_balance").unwrap(),
-                max_balance_1h: row.get("max_balance_1h").unwrap(),
-                max_balance_24h: row.get("max_balance_24h").unwrap(),
-                max_balance_7d: row.get("max_balance_7d").unwrap(),
+                address: row.get("address").context("Missing 'address' column")?,
+                total_volume: row.get("total_volume").context("Missing 'total_volume' column")?,
+                avg_buy_price: row.get("avg_buy_price").context("Missing 'avg_buy_price' column")?,
+                avg_sell_price: row.get("avg_sell_price").context("Missing 'avg_sell_price' column")?,
+                max_balance: row.get("max_balance").context("Missing 'max_balance' column")?,
+                max_balance_1h: row.get("max_balance_1h").context("Missing 'max_balance_1h' column")?,
+                max_balance_24h: row.get("max_balance_24h").context("Missing 'max_balance_24h' column")?,
+                max_balance_7d: row.get("max_balance_7d").context("Missing 'max_balance_7d' column")?,
             });
         }
 

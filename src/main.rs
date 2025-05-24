@@ -4,7 +4,6 @@ mod storage;
 mod metrics;
 
 use storage::{ClickHouseStorage, MockStorage, Storage};
-
 use crate::metrics::calculate_user_stats;
 use generator::generate_transfers;
 use std::env;
@@ -25,8 +24,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         run_with_storage(storage, &transfers).await?;
     } else {
         println!("\nПытаемся подключиться к ClickHouse...");
-        match ClickHouseStorage::new("tcp://clickhouse:9000").await
-        {
+        match ClickHouseStorage::new("tcp://clickhouse:9000").await {
             Ok(storage) => {
                 println!("Подключение к ClickHouse успешно!");
                 run_with_storage(Box::new(storage), &transfers).await?;

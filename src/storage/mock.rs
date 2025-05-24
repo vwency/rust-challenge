@@ -35,9 +35,10 @@ impl Storage for MockStorage {
         Ok(())
     }
 
-    async fn get_stats(&self) -> Result<Vec<UserStats>, StorageError> {
+    async fn get_stats(&self) -> anyhow::Result<Vec<UserStats>> {
         let stats = self.stats.lock().unwrap();
         println!("MockStorage: возвращаем {} записей статистики", stats.len());
         Ok(stats.clone())
     }
 }
+
