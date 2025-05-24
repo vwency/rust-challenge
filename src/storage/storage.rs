@@ -92,7 +92,10 @@ impl ClickHouseStorage {
                 total_volume Float64,
                 avg_buy_price Float64,
                 avg_sell_price Float64,
-                max_balance Float64
+                max_balance Float64,
+                max_balance_1h Float64,
+                max_balance_24h Float64,
+                max_balance_7d Float64
             ) ENGINE = ReplacingMergeTree()
             ORDER BY address
         ").await {
@@ -104,7 +107,6 @@ impl ClickHouseStorage {
         Ok(Self { pool })
     }
 }
-
 
 #[async_trait::async_trait]
 impl Storage for ClickHouseStorage {
@@ -156,6 +158,9 @@ impl Storage for ClickHouseStorage {
         let buy_price_vec: Vec<f64> = stats.iter().map(|s| s.avg_buy_price).collect();
         let sell_price_vec: Vec<f64> = stats.iter().map(|s| s.avg_sell_price).collect();
         let max_balance_vec: Vec<f64> = stats.iter().map(|s| s.max_balance).collect();
+        let max_balance_1h_vec: Vec<f64> = stats.iter().map(|s| s.max_balance_1h).collect();
+        let max_balance_24h_vec: Vec<f64> = stats.iter().map(|s| s.max_balance_24h).collect();
+        let max_balance_7d_vec: Vec<f64> = stats.iter().map(|s| s.max_balance_7d).collect();
 
         let mut block = Block::new();
         block = block
@@ -163,7 +168,10 @@ impl Storage for ClickHouseStorage {
             .column("total_volume", volume_vec)
             .column("avg_buy_price", buy_price_vec)
             .column("avg_sell_price", sell_price_vec)
-            .column("max_balance", max_balance_vec);
+            .column("max_balance", max_balance_vec)
+            .column("max_balance_1h", max_balance_1h_vec)
+            .column("max_balance_24h", max_balance_24h_vec)
+            .column("max_balance_7d", max_balance_7d_vec);
 
         println!("Вставляем {} записей статистики...", stats.len());
         client.insert("user_stats", block).await?;
@@ -177,7 +185,7 @@ impl Storage for ClickHouseStorage {
 
         println!("Читаем статистику из базы данных...");
         let block = client
-            .query("SELECT address, total_volume, avg_buy_price, avg_sell_price, max_balance FROM user_stats ORDER BY total_volume DESC")
+            .query("SELECT address, total_volume, avg_buy_price, avg_sell_price, max_balance, max_balance_1h, max_balance_24h, max_balance_7d FROM user_stats ORDER BY total_volume DESC")
             .fetch_all()
             .await?;
 
@@ -189,6 +197,9 @@ impl Storage for ClickHouseStorage {
             let avg_buy_price: f64 = row.get("avg_buy_price")?;
             let avg_sell_price: f64 = row.get("avg_sell_price")?;
             let max_balance: f64 = row.get("max_balance")?;
+            let max_balance_1h: f64 = row.get("max_balance_1h")?;
+            let max_balance_24h: f64 = row.get("max_balance_24h")?;
+            let max_balance_7d: f64 = row.get("max_balance_7d")?;
 
             stats.push(UserStats {
                 address,
@@ -196,9 +207,9 @@ impl Storage for ClickHouseStorage {
                 avg_buy_price,
                 avg_sell_price,
                 max_balance,
-                max_balance_1h: 0.0,
-                max_balance_24h: 0.0,
-                max_balance_7d: 0.0,
+                max_balance_1h,
+                max_balance_24h,
+                max_balance_7d,
             });
         }
 

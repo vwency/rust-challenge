@@ -25,7 +25,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         run_with_storage(storage, &transfers).await?;
     } else {
         println!("\nПытаемся подключиться к ClickHouse...");
-        match ClickHouseStorage::new("tcp://clickhouse:9000").await
+        match ClickHouseStorage::new("tcp://localhost:9000").await
         {
             Ok(storage) => {
                 println!("Подключение к ClickHouse успешно!");
