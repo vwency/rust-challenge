@@ -12,6 +12,8 @@ pub struct ClickHouseStorage {
 pub enum StorageError {
     #[error("ClickHouse error: {0}")]
     ClickHouse(#[from] clickhouse_rs::errors::Error),
+
+    #[allow(dead_code)]
     #[error("Storage error: {0}")]
     Generic(String),
 }
