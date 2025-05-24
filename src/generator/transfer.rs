@@ -1,40 +1,20 @@
 use crate::model::Transfer;
 use rand::{distributions::Alphanumeric, Rng};
 use std::time::{SystemTime, UNIX_EPOCH};
-
-pub fn generate_transfers(count: usize) -> Vec<Transfer> {
-    let config = TransferGenConfig::default();
-    let generator = DefaultTransferGenerator { config };
-    generator.generate(count)
-}
+use crate::generator::config::TransferGenConfig;
 
 pub trait TransferGenerator {
     fn generate(&self, count: usize) -> Vec<Transfer>;
 }
 
-#[derive(Debug, Clone)]
-pub struct TransferGenConfig {
-    pub min_amount: f64,
-    pub max_amount: f64,
-    pub min_price: f64,
-    pub max_price: f64,
-    pub max_age_secs: u64,
-}
-
-impl Default for TransferGenConfig {
-    fn default() -> Self {
-        Self {
-            min_amount: 1.0,
-            max_amount: 1000.0,
-            min_price: 0.1,
-            max_price: 2.0,
-            max_age_secs: 86_400 * 30, // 30 дней
-        }
-    }
-}
-
 pub struct DefaultTransferGenerator {
     pub config: TransferGenConfig,
+}
+
+impl DefaultTransferGenerator {
+    pub fn new(config: TransferGenConfig) -> Self {
+        Self { config }
+    }
 }
 
 impl TransferGenerator for DefaultTransferGenerator {
@@ -72,4 +52,10 @@ fn rand_address(rng: &mut impl Rng) -> String {
         .map(char::from)
         .collect();
     format!("0x{}", suffix)
+}
+
+pub fn generate_transfers(count: usize) -> Vec<Transfer> {
+    let config = TransferGenConfig::default();
+    let generator = DefaultTransferGenerator::new(config);
+    generator.generate(count)
 }

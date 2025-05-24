@@ -1,2 +1,5 @@
-pub mod generator;
-pub use generator::generate_transfers;
+mod transfer;
+mod config;
+mod address;
+
+pub use transfer::generate_transfers;
