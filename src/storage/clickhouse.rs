@@ -1,8 +1,8 @@
 use crate::model::{Transfer, UserStats};
 use clickhouse_rs::{types::Block, Pool};
-use crate::storage::{Storage, errors::StorageError};  // Импортируем ошибку из errors.rs
+use crate::storage::{Storage, errors::StorageError};
 use async_trait::async_trait;
-use anyhow::Context;
+use anyhow::{Context, Result};
 
 #[derive(Debug)]
 pub struct ClickHouseStorage {
@@ -14,8 +14,12 @@ impl ClickHouseStorage {
         println!("Подключение к ClickHouse по адресу: {}", database_url);
         let pool = Pool::new(database_url);
         let mut client = pool.get_handle().await.map_err(StorageError::ClickHouse)?;
-        client.query("SHOW DATABASES").fetch_all().await?;
-        client.query("SHOW TABLES FROM default").fetch_all().await?;
+
+        client.query("SHOW DATABASES").fetch_all().await
+            .map_err(StorageError::ClickHouse)?;
+        client.query("SHOW TABLES FROM default").fetch_all().await
+            .map_err(StorageError::ClickHouse)?;
+
         client.execute("
             CREATE TABLE IF NOT EXISTS default.transfers (
                 ts UInt64,
@@ -24,7 +28,8 @@ impl ClickHouseStorage {
                 amount Float64,
                 usd_price Float64
             ) ENGINE = MergeTree() ORDER BY (ts, from, to)
-        ").await?;
+        ").await.map_err(StorageError::ClickHouse)?;
+
         client.execute("
             CREATE TABLE IF NOT EXISTS default.user_stats (
                 address String,
@@ -36,7 +41,8 @@ impl ClickHouseStorage {
                 max_balance_24h Float64,
                 max_balance_7d Float64
             ) ENGINE = ReplacingMergeTree() ORDER BY address
-        ").await?;
+        ").await.map_err(StorageError::ClickHouse)?;
+
         println!("Таблицы созданы успешно");
         Ok(Self { pool })
     }
@@ -44,28 +50,41 @@ impl ClickHouseStorage {
 
 #[async_trait]
 impl Storage for ClickHouseStorage {
-    async fn save_transfers(&self, transfers: &[Transfer]) -> Result<(), StorageError> {
+    async fn save_transfers(&self, transfers: &[Transfer]) -> Result<()> {
         if transfers.is_empty() {
             return Ok(());
         }
-        let mut client = self.pool.get_handle().await?;
-        client.execute("TRUNCATE TABLE transfers").await?;
+
+        let mut client = self.pool.get_handle().await
+            .context("Failed to get database handle")?;
+
+        client.execute("TRUNCATE TABLE transfers").await
+            .context("Failed to truncate transfers table")?;
+
         let block = Block::new()
             .column("ts", transfers.iter().map(|t| t.ts).collect::<Vec<_>>())
             .column("from", transfers.iter().map(|t| t.from.clone()).collect::<Vec<_>>())
             .column("to", transfers.iter().map(|t| t.to.clone()).collect::<Vec<_>>())
             .column("amount", transfers.iter().map(|t| t.amount).collect::<Vec<_>>())
             .column("usd_price", transfers.iter().map(|t| t.usd_price).collect::<Vec<_>>());
-        client.insert("transfers", block).await?;
+
+        client.insert("transfers", block).await
+            .context("Failed to insert transfers data")?;
+
         Ok(())
     }
 
-    async fn save_stats(&self, stats: &[UserStats]) -> Result<(), StorageError> {
+    async fn save_stats(&self, stats: &[UserStats]) -> Result<()> {
         if stats.is_empty() {
             return Ok(());
         }
-        let mut client = self.pool.get_handle().await?;
-        client.execute("TRUNCATE TABLE user_stats").await?;
+
+        let mut client = self.pool.get_handle().await
+            .context("Failed to get database handle")?;
+
+        client.execute("TRUNCATE TABLE user_stats").await
+            .context("Failed to truncate user_stats table")?;
+
         let block = Block::new()
             .column("address", stats.iter().map(|s| s.address.clone()).collect::<Vec<_>>())
             .column("total_volume", stats.iter().map(|s| s.total_volume).collect::<Vec<_>>())
@@ -75,13 +94,17 @@ impl Storage for ClickHouseStorage {
             .column("max_balance_1h", stats.iter().map(|s| s.max_balance_1h).collect::<Vec<_>>())
             .column("max_balance_24h", stats.iter().map(|s| s.max_balance_24h).collect::<Vec<_>>())
             .column("max_balance_7d", stats.iter().map(|s| s.max_balance_7d).collect::<Vec<_>>());
-        client.insert("user_stats", block).await?;
+
+        client.insert("user_stats", block).await
+            .context("Failed to insert user stats data")?;
+
         Ok(())
     }
 
-    async fn get_stats(&self) -> anyhow::Result<Vec<UserStats>> {
+    async fn get_stats(&self) -> Result<Vec<UserStats>> {
         let mut client = self.pool.get_handle().await
             .context("Failed to get database handle")?;
+
         let block = client
             .query("SELECT address, total_volume, avg_buy_price, avg_sell_price, max_balance, max_balance_1h, max_balance_24h, max_balance_7d FROM user_stats ORDER BY total_volume DESC")
             .fetch_all()

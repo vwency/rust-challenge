@@ -1,7 +1,8 @@
 use crate::model::{Transfer, UserStats};
-use crate::storage::{Storage, errors::StorageError};
+use crate::storage::Storage;
 use async_trait::async_trait;
 use std::sync::Mutex;
+use anyhow::{Context, Result};
 
 #[derive(Debug)]
 pub struct MockStorage {
@@ -21,24 +22,29 @@ impl MockStorage {
 
 #[async_trait]
 impl Storage for MockStorage {
-    async fn save_transfers(&self, transfers: &[Transfer]) -> Result<(), StorageError> {
+    async fn save_transfers(&self, transfers: &[Transfer]) -> Result<()> {
         println!("MockStorage: сохраняем {} трансферов", transfers.len());
-        *self.transfers.lock().map_err(|e| StorageError::Generic(format!("Ошибка блокировки мьютекса transfers: {}", e)))? = transfers.to_vec();
+        let mut locked_transfers = self.transfers.lock()
+            .map_err(|e| anyhow::anyhow!("Ошибка блокировки мьютекса transfers: {}", e))
+            .context("Failed to lock transfers mutex")?;
+        *locked_transfers = transfers.to_vec();
         Ok(())
     }
 
-    async fn save_stats(&self, stats: &[UserStats]) -> Result<(), StorageError> {
+    async fn save_stats(&self, stats: &[UserStats]) -> Result<()> {
         println!("MockStorage: сохраняем {} записей статистики", stats.len());
-        let mut locked_stats = self.stats.lock().map_err(|e| StorageError::Generic(format!("Ошибка блокировки мьютекса stats: {}", e)))?;
+        let mut locked_stats = self.stats.lock()
+            .map_err(|e| anyhow::anyhow!("Ошибка блокировки мьютекса stats: {}", e))
+            .context("Failed to lock stats mutex")?;
         *locked_stats = stats.to_vec();
         locked_stats.sort_by(|a, b| b.total_volume.partial_cmp(&a.total_volume).unwrap_or(std::cmp::Ordering::Equal));
         Ok(())
     }
 
-    async fn get_stats(&self) -> anyhow::Result<Vec<UserStats>> {
+    async fn get_stats(&self) -> Result<Vec<UserStats>> {
         let stats = self.stats.lock()
-            .map_err(|e| StorageError::Generic(format!("Ошибка блокировки мьютекса stats: {}", e)))
-            .map_err(|e| anyhow::anyhow!(e))?;  // Приводим StorageError в anyhow::Error
+            .map_err(|e| anyhow::anyhow!("Ошибка блокировки мьютекса stats: {}", e))
+            .context("Failed to lock stats mutex for reading")?;
         println!("MockStorage: возвращаем {} записей статистики", stats.len());
         Ok(stats.clone())
     }
