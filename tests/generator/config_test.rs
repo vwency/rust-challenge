@@ -1,4 +1,4 @@
-use token_transfers::generator::config::TransferGenConfig;
+use crate::generator::config::TransferGenConfig;
 
 #[test]
 fn test_default_config() {

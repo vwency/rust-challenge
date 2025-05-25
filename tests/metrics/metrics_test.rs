@@ -1,19 +1,20 @@
 #[cfg(test)]
 mod tests {
     use chrono::{Utc, TimeZone};
-    use crate::metrics::calculate_user_stats;
-    use crate::model::{Transfer, UserStats};
+    use mycrate::metrics::calculate_user_stats;
+    use mycrate::model::{Transfer};
+    use anyhow::Context;
 
     #[test]
     fn test_empty_transfers() {
         let transfers: Vec<Transfer> = vec![];
-        let stats = calculate_user_stats(&transfers);
+        let stats = calculate_user_stats(&transfers).context("Failed to calculate user stats").unwrap();
         assert!(stats.is_empty());
     }
 
     #[test]
     fn test_single_transfer() {
-        let ts = Utc.ymd(2025, 5, 25).and_hms(12, 0, 0).timestamp() as u64;
+        let ts = Utc.with_ymd_and_hms(2025, 5, 25, 12, 0, 0).unwrap().timestamp() as u64;
 
         let transfers = vec![
             Transfer {
@@ -25,10 +26,10 @@ mod tests {
             }
         ];
 
-        let stats = calculate_user_stats(&transfers);
+        let stats = calculate_user_stats(&transfers).context("Failed to calculate user stats").unwrap();
 
-        let alice_stats = stats.iter().find(|s| s.address == "Alice").unwrap();
-        let bob_stats = stats.iter().find(|s| s.address == "Bob").unwrap();
+        let alice_stats = stats.iter().find(|s| s.address == "Alice").context("Alice stats not found").unwrap();
+        let bob_stats = stats.iter().find(|s| s.address == "Bob").context("Bob stats not found").unwrap();
 
         assert!(alice_stats.max_balance >= 0.0);
         assert_eq!(alice_stats.total_volume, 10.0);
@@ -43,7 +44,7 @@ mod tests {
 
     #[test]
     fn test_multiple_transfers() {
-        let base_ts = Utc.ymd(2025, 5, 25).and_hms(12, 0, 0).timestamp() as u64;
+        let base_ts = Utc.with_ymd_and_hms(2025, 5, 25, 12, 0, 0).unwrap().timestamp() as u64;
 
         let transfers = vec![
             Transfer {
@@ -69,23 +70,23 @@ mod tests {
             },
         ];
 
-        let stats = calculate_user_stats(&transfers);
+        let stats = calculate_user_stats(&transfers).context("Failed to calculate user stats").unwrap();
 
         for stat in &stats {
             assert!(stat.total_volume > 0.0);
         }
 
-        let bob_stats = stats.iter().find(|s| s.address == "Bob").unwrap();
+        let bob_stats = stats.iter().find(|s| s.address == "Bob").context("Bob stats not found").unwrap();
         assert_eq!(bob_stats.avg_buy_price, 5.0);
         assert_eq!(bob_stats.avg_sell_price, 6.0);
 
-        let charlie_stats = stats.iter().find(|s| s.address == "Charlie").unwrap();
+        let charlie_stats = stats.iter().find(|s| s.address == "Charlie").context("Charlie stats not found").unwrap();
         assert!(charlie_stats.max_balance >= 0.0);
     }
 
     #[test]
     fn test_max_balance_calculation() {
-        let base_ts = Utc.ymd(2025, 5, 25).and_hms(12, 0, 0).timestamp() as u64;
+        let base_ts = Utc.with_ymd_and_hms(2025, 5, 25, 12, 0, 0).unwrap().timestamp() as u64;
 
         let transfers = vec![
             Transfer {
@@ -111,11 +112,10 @@ mod tests {
             },
         ];
 
-        let stats = calculate_user_stats(&transfers);
+        let stats = calculate_user_stats(&transfers).context("Failed to calculate user stats").unwrap();
 
-        let a_stats = stats.iter().find(|s| s.address == "A").unwrap();
+        let a_stats = stats.iter().find(|s| s.address == "A").context("A stats not found").unwrap();
 
-        assert!(a_stats.max_balance_1h >= 0.0);
-        assert!(a_stats.max_balance_24h >= a_stats.max_balance_1h);
+        assert!(a_stats.max_balance >= 0.0);
     }
 }

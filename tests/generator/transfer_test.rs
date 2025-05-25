@@ -1,5 +1,5 @@
 use std::time::{SystemTime, UNIX_EPOCH};
-use token_transfers::generator::{
+use mycrate::generator::{
     config::TransferGenConfig,
     transfer::{DefaultTransferGenerator, TransferGenerator, generate_transfers}
 };

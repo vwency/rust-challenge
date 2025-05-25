@@ -1,1 +1,2 @@
-pub mod metrics_tests;
+#[cfg(test)]
+pub mod metrics_test;

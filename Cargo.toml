@@ -14,3 +14,8 @@ thiserror = "1.0.69"
 serde_json = "1.0.140"
 async-trait = "0.1.88"
 anyhow = "1.0"
+
+
+[lib]
+name = "mycrate"
+path = "src/lib.rs"

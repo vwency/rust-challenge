@@ -33,7 +33,11 @@ impl TransferGenerator for DefaultTransferGenerator {
                 let to = rand_address(&mut rng);
                 let amount = rng.gen_range(self.config.min_amount..self.config.max_amount);
                 let usd_price = rng.gen_range(self.config.min_price..self.config.max_price);
-                let ts = now - rng.gen_range(0..self.config.max_age_secs);
+                let ts = if self.config.max_age_secs == 0 {
+                    now
+                } else {
+                    now - rng.gen_range(0..self.config.max_age_secs)
+                };
 
                 Transfer {
                     ts,
@@ -46,6 +50,7 @@ impl TransferGenerator for DefaultTransferGenerator {
             .collect()
     }
 }
+
 
 pub fn generate_transfers(count: usize) -> Vec<Transfer> {
     let config = TransferGenConfig::default();

@@ -1,5 +1,5 @@
 use std::collections::HashSet;
-use token_transfers::generator::address::rand_address;
+use crate::generator::address::rand_address;
 
 #[test]
 fn test_address_format() {
@@ -10,7 +10,7 @@ fn test_address_format() {
     assert_eq!(addr.len(), 42); // 0x + 40 chars
 
     let hex_part = &addr[2..];
-    assert!(hex_part.chars().all(|c| c.is_ascii_alphanumeric()));
+    assert!(hex_part.chars().all(|c| c.is_digit(16)));
 }
 
 #[test]
