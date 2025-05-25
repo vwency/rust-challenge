@@ -1,14 +1,16 @@
 use std::collections::HashSet;
 use std::thread;
 use std::time::{SystemTime, UNIX_EPOCH};
+use anyhow::{Context, Result};
+
 use mycrate::generator::{
     config::TransferGenConfig,
     transfer::{DefaultTransferGenerator, TransferGenerator, generate_transfers},
 };
 
 #[test]
-fn test_large_scale_generation() {
-    let transfers = generate_transfers(10000);
+fn test_large_scale_generation() -> Result<()> {
+    let transfers = generate_transfers(10000)?;
     assert_eq!(transfers.len(), 10000);
 
     let config = TransferGenConfig::default();
@@ -19,10 +21,11 @@ fn test_large_scale_generation() {
         assert!(transfer.from.starts_with("0x"));
         assert!(transfer.to.starts_with("0x"));
     }
+    Ok(())
 }
 
 #[test]
-fn test_thread_safety() {
+fn test_thread_safety() -> Result<()> {
     let handles: Vec<_> = (0..4)
         .map(|_| {
             thread::spawn(|| {
@@ -33,7 +36,7 @@ fn test_thread_safety() {
 
     let mut all_transfers = Vec::new();
     for handle in handles {
-        let transfers = handle.join().unwrap();
+        let transfers = handle.join().unwrap()?;
         assert_eq!(transfers.len(), 100);
         all_transfers.extend(transfers);
     }
@@ -46,11 +49,12 @@ fn test_thread_safety() {
         assert!(transfer.amount > 0.0);
         assert!(transfer.usd_price > 0.0);
     }
+    Ok(())
 }
 
 #[test]
-fn test_address_diversity() {
-    let transfers = generate_transfers(100);
+fn test_address_diversity() -> Result<()> {
+    let transfers = generate_transfers(100)?;
     let mut unique_addresses = HashSet::new();
 
     for transfer in &transfers {
@@ -59,10 +63,11 @@ fn test_address_diversity() {
     }
 
     assert!(unique_addresses.len() >= 150);
+    Ok(())
 }
 
 #[test]
-fn test_end_to_end_workflow() {
+fn test_end_to_end_workflow() -> Result<()> {
     let config = TransferGenConfig {
         min_amount: 10.0,
         max_amount: 100.0,
@@ -72,13 +77,13 @@ fn test_end_to_end_workflow() {
     };
 
     let generator = DefaultTransferGenerator::new(config.clone());
-    let transfers = generator.generate(25);
+    let transfers = generator.generate(25)?;
 
     assert_eq!(transfers.len(), 25);
 
     let now = SystemTime::now()
         .duration_since(UNIX_EPOCH)
-        .unwrap()
+        .context("Failed to get current time")?
         .as_secs();
 
     let mut unique_addresses = HashSet::new();
@@ -103,10 +108,11 @@ fn test_end_to_end_workflow() {
     }
 
     assert!(unique_addresses.len() >= 40);
+    Ok(())
 }
 
 #[test]
-fn test_multiple_generators_independence() {
+fn test_multiple_generators_independence() -> Result<()> {
     let config1 = TransferGenConfig::default();
     let config2 = TransferGenConfig {
         min_amount: 5.0,
@@ -119,8 +125,8 @@ fn test_multiple_generators_independence() {
     let gen1 = DefaultTransferGenerator::new(config1.clone());
     let gen2 = DefaultTransferGenerator::new(config2.clone());
 
-    let transfers1 = gen1.generate(10);
-    let transfers2 = gen2.generate(10);
+    let transfers1 = gen1.generate(10)?;
+    let transfers2 = gen2.generate(10)?;
 
     assert_eq!(transfers1.len(), 10);
     assert_eq!(transfers2.len(), 10);
@@ -134,4 +140,5 @@ fn test_multiple_generators_independence() {
         assert!(transfer.amount >= config2.min_amount);
         assert!(transfer.amount <= config2.max_amount);
     }
+    Ok(())
 }

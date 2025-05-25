@@ -14,7 +14,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("=== Сервис анализа трансферов токенов ===\n");
 
     println!("Генерируем тестовые данные...");
-    let transfers = generate_transfers(10_000);
+    let transfers = generate_transfers(10)?;
     println!("Сгенерировано {} трансферов", transfers.len());
 
     let use_mock = env::var("USE_MOCK").unwrap_or_else(|_| "false".to_string()) == "true";

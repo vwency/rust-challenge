@@ -1,26 +1,30 @@
 use std::time::{SystemTime, UNIX_EPOCH};
+use anyhow::Result;
+
 use mycrate::generator::{
     config::TransferGenConfig,
     transfer::{DefaultTransferGenerator, TransferGenerator, generate_transfers}
 };
 
 #[test]
-fn test_generate_transfers_count() {
-    let transfers = generate_transfers(10);
+fn test_generate_transfers_count() -> Result<()> {
+    let transfers = generate_transfers(10)?;
     assert_eq!(transfers.len(), 10);
 
-    let transfers = generate_transfers(0);
+    let transfers = generate_transfers(0)?;
     assert_eq!(transfers.len(), 0);
 
-    let transfers = generate_transfers(100);
+    let transfers = generate_transfers(100)?;
     assert_eq!(transfers.len(), 100);
+
+    Ok(())
 }
 
 #[test]
-fn test_transfer_generator_basic() {
+fn test_transfer_generator_basic() -> Result<()> {
     let config = TransferGenConfig::default();
     let generator = DefaultTransferGenerator::new(config.clone());
-    let transfers = generator.generate(20);
+    let transfers = generator.generate(20)?;
 
     assert_eq!(transfers.len(), 20);
 
@@ -42,17 +46,18 @@ fn test_transfer_generator_basic() {
         assert!(transfer.amount.is_finite());
         assert!(transfer.usd_price.is_finite());
     }
+
+    Ok(())
 }
 
 #[test]
-fn test_transfer_timestamps() {
+fn test_transfer_timestamps() -> Result<()> {
     let config = TransferGenConfig::default();
     let generator = DefaultTransferGenerator::new(config.clone());
-    let transfers = generator.generate(10);
+    let transfers = generator.generate(10)?;
 
     let now = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .unwrap()
+        .duration_since(UNIX_EPOCH)?
         .as_secs();
 
     for transfer in &transfers {
@@ -60,20 +65,26 @@ fn test_transfer_timestamps() {
         assert!(transfer.ts >= now - config.max_age_secs);
         assert!(transfer.ts > 0);
     }
+
+    Ok(())
 }
 
 #[test]
-fn test_custom_config_ranges() {
+fn test_custom_config_ranges() -> Result<()> {
     let config = TransferGenConfig {
         min_amount: 5.0,
         max_amount: 50.0,
         min_price: 1.0,
         max_price: 3.0,
-        max_age_secs: 3600, // 1 hour
+        max_age_secs: 3600,
     };
 
     let generator = DefaultTransferGenerator::new(config.clone());
-    let transfers = generator.generate(30);
+    let transfers = generator.generate(30)?;
+
+    let now = SystemTime::now()
+        .duration_since(UNIX_EPOCH)?
+        .as_secs();
 
     for transfer in &transfers {
         assert!(transfer.amount >= config.min_amount);
@@ -81,16 +92,14 @@ fn test_custom_config_ranges() {
         assert!(transfer.usd_price >= config.min_price);
         assert!(transfer.usd_price <= config.max_price);
 
-        let now = SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .unwrap()
-            .as_secs();
         assert!(transfer.ts >= now - config.max_age_secs);
     }
+
+    Ok(())
 }
 
 #[test]
-fn test_edge_case_small_ranges() {
+fn test_edge_case_small_ranges() -> Result<()> {
     let config = TransferGenConfig {
         min_amount: 1.0,
         max_amount: 1.1,
@@ -100,7 +109,7 @@ fn test_edge_case_small_ranges() {
     };
 
     let generator = DefaultTransferGenerator::new(config.clone());
-    let transfers = generator.generate(5);
+    let transfers = generator.generate(5)?;
 
     for transfer in &transfers {
         assert!(transfer.amount >= config.min_amount);
@@ -108,10 +117,12 @@ fn test_edge_case_small_ranges() {
         assert!(transfer.usd_price >= config.min_price);
         assert!(transfer.usd_price <= config.max_price);
     }
+
+    Ok(())
 }
 
 #[test]
-fn test_zero_max_age() {
+fn test_zero_max_age() -> Result<()> {
     let config = TransferGenConfig {
         min_amount: 1.0,
         max_amount: 10.0,
@@ -121,15 +132,16 @@ fn test_zero_max_age() {
     };
 
     let generator = DefaultTransferGenerator::new(config);
-    let transfers = generator.generate(5);
+    let transfers = generator.generate(5)?;
 
     let now = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .unwrap()
+        .duration_since(UNIX_EPOCH)?
         .as_secs();
 
     for transfer in &transfers {
-        assert!(transfer.ts >= now - 1); // Allow 1 second tolerance
+        assert!(transfer.ts >= now - 1);
         assert!(transfer.ts <= now);
     }
+
+    Ok(())
 }

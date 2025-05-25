@@ -1,12 +1,14 @@
-use crate::model::Transfer;
+use anyhow::{Context, Result};
 use rand::Rng;
-use std::time::{SystemTime, UNIX_EPOCH};
 use rand::prelude::ThreadRng;
+use std::time::{SystemTime, UNIX_EPOCH};
+
+use crate::model::Transfer;
 use crate::generator::config::TransferGenConfig;
 use crate::generator::address::rand_address;
 
 pub trait TransferGenerator {
-    fn generate(&self, count: usize) -> Vec<Transfer>;
+    fn generate(&self, count: usize) -> Result<Vec<Transfer>>;
 }
 
 pub struct DefaultTransferGenerator {
@@ -20,14 +22,15 @@ impl DefaultTransferGenerator {
 }
 
 impl TransferGenerator for DefaultTransferGenerator {
-    fn generate(&self, count: usize) -> Vec<Transfer> {
+    fn generate(&self, count: usize) -> Result<Vec<Transfer>> {
         let mut rng: ThreadRng = rand::thread_rng();
+
         let now = SystemTime::now()
             .duration_since(UNIX_EPOCH)
-            .unwrap()
+            .context("Failed to get duration since UNIX_EPOCH")?
             .as_secs();
 
-        (0..count)
+        let transfers = (0..count)
             .map(|_| {
                 let from = rand_address(&mut rng);
                 let to = rand_address(&mut rng);
@@ -47,12 +50,13 @@ impl TransferGenerator for DefaultTransferGenerator {
                     usd_price,
                 }
             })
-            .collect()
+            .collect();
+
+        Ok(transfers)
     }
 }
 
-
-pub fn generate_transfers(count: usize) -> Vec<Transfer> {
+pub fn generate_transfers(count: usize) -> Result<Vec<Transfer>> {
     let config = TransferGenConfig::default();
     let generator = DefaultTransferGenerator::new(config);
     generator.generate(count)
