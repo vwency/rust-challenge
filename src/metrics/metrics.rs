@@ -55,7 +55,7 @@ pub fn calculate_user_stats(transfers: &[Transfer]) -> Result<Vec<UserStats>> {
     }
 
     for (addr, history) in balance_history {
-        let history_dt: Result<Vec<(DateTime<Utc>, f64)>> = history
+        let history_dt = history
             .into_iter()
             .map(|(ts, balance)| {
                 DateTime::<Utc>::from_timestamp(ts as i64, 0)
@@ -63,9 +63,8 @@ pub fn calculate_user_stats(transfers: &[Transfer]) -> Result<Vec<UserStats>> {
                     .context("Failed to convert timestamp to DateTime")
                     .map(|dt| (dt, balance))
             })
-            .collect();
-
-        let history_dt = history_dt.context("Failed to process balance history")?;
+            .collect::<Result<Vec<_>>>()
+            .context("Failed to process balance history")?;
 
         if let Some((_, max_1h)) = calculate_max_balance_for_period(&history_dt, Duration::hours(1))
             .context("Failed to calculate max balance for 1 hour period")? {
@@ -80,10 +79,10 @@ pub fn calculate_user_stats(transfers: &[Transfer]) -> Result<Vec<UserStats>> {
             max_balances_7d.insert(addr.clone(), max_7d);
         }
     }
-
+    
     let all_addresses: HashSet<_> = buy_prices.keys().chain(sell_prices.keys()).cloned().collect();
 
-    let user_stats: Result<Vec<UserStats>> = all_addresses
+    let user_stats = all_addresses
         .into_iter()
         .map(|addr| {
             let buys = buy_prices.get(&addr).cloned().unwrap_or_default();
@@ -92,15 +91,19 @@ pub fn calculate_user_stats(transfers: &[Transfer]) -> Result<Vec<UserStats>> {
             let total_volume: f64 = buys.iter().chain(&sells).map(|(_, amt)| amt).sum();
 
             let avg_weighted_price = |data: &[(f64, f64)]| -> Result<f64> {
-                let (sum_weighted, sum_amount): (f64, f64) = data.iter().copied()
+                let (sum_weighted, sum_amount) = data.iter().copied()
                     .fold((0.0, 0.0), |acc, (price, amount)| (acc.0 + price * amount, acc.1 + amount));
 
                 if sum_amount > 0.0 {
                     if sum_weighted.is_finite() && sum_amount.is_finite() {
                         Ok(sum_weighted / sum_amount)
                     } else {
-                        Err(anyhow::anyhow!("Invalid arithmetic result: sum_weighted={}, sum_amount={}", sum_weighted, sum_amount))
-                            .context("Arithmetic overflow or invalid values in weighted average calculation")
+                        Err(anyhow::anyhow!(
+                            "Invalid arithmetic result: sum_weighted={}, sum_amount={}",
+                            sum_weighted,
+                            sum_amount
+                        ))
+                            .context("Arithmetic overflow in weighted average calculation")
                     }
                 } else {
                     Ok(0.0)
@@ -123,9 +126,10 @@ pub fn calculate_user_stats(transfers: &[Transfer]) -> Result<Vec<UserStats>> {
                 max_balance_7d: *max_balances_7d.get(&addr).unwrap_or(&0.0),
             })
         })
-        .collect();
+        .collect::<Result<Vec<UserStats>>>()
+        .context("Failed to calculate user statistics")?;
 
-    user_stats.context("Failed to calculate user statistics")
+    Ok(user_stats)
 }
 
 fn calculate_max_balance_for_period(
@@ -137,7 +141,10 @@ fn calculate_max_balance_for_period(
 
     for (i, &(ts, balance)) in balance_history.iter().enumerate() {
         let window_end = ts.checked_add_signed(period)
-            .ok_or_else(|| anyhow::anyhow!("DateTime arithmetic overflow when adding period to timestamp: {:?}", ts))
+            .ok_or_else(|| anyhow::anyhow!(
+                "DateTime arithmetic overflow when adding period to timestamp: {:?}",
+                ts
+            ))
             .context("Failed to calculate window end time")?;
 
         let mut current_max = balance;

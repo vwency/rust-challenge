@@ -6,15 +6,19 @@ mod tests {
     use anyhow::Context;
 
     #[test]
-    fn test_empty_transfers() {
+    fn test_empty_transfers() -> anyhow::Result<()> {
         let transfers: Vec<Transfer> = vec![];
-        let stats = calculate_user_stats(&transfers).context("Failed to calculate user stats").unwrap();
+        let stats = calculate_user_stats(&transfers).context("Failed to calculate user stats")?;
         assert!(stats.is_empty());
+        Ok(())
     }
 
     #[test]
-    fn test_single_transfer() {
-        let ts = Utc.with_ymd_and_hms(2025, 5, 25, 12, 0, 0).unwrap().timestamp() as u64;
+    fn test_single_transfer() -> anyhow::Result<()> {
+        let ts = Utc.with_ymd_and_hms(2025, 5, 25, 12, 0, 0)
+            .single()
+            .context("Invalid timestamp")?
+            .timestamp() as u64;
 
         let transfers = vec![
             Transfer {
@@ -26,10 +30,14 @@ mod tests {
             }
         ];
 
-        let stats = calculate_user_stats(&transfers).context("Failed to calculate user stats").unwrap();
+        let stats = calculate_user_stats(&transfers).context("Failed to calculate user stats")?;
 
-        let alice_stats = stats.iter().find(|s| s.address == "Alice").context("Alice stats not found").unwrap();
-        let bob_stats = stats.iter().find(|s| s.address == "Bob").context("Bob stats not found").unwrap();
+        let alice_stats = stats.iter()
+            .find(|s| s.address == "Alice")
+            .context("Alice stats not found")?;
+        let bob_stats = stats.iter()
+            .find(|s| s.address == "Bob")
+            .context("Bob stats not found")?;
 
         assert!(alice_stats.max_balance >= 0.0);
         assert_eq!(alice_stats.total_volume, 10.0);
@@ -40,11 +48,16 @@ mod tests {
         assert_eq!(bob_stats.total_volume, 10.0);
         assert_eq!(bob_stats.avg_buy_price, 5.0);
         assert_eq!(bob_stats.avg_sell_price, 0.0);
+
+        Ok(())
     }
 
     #[test]
-    fn test_multiple_transfers() {
-        let base_ts = Utc.with_ymd_and_hms(2025, 5, 25, 12, 0, 0).unwrap().timestamp() as u64;
+    fn test_multiple_transfers() -> anyhow::Result<()> {
+        let base_ts = Utc.with_ymd_and_hms(2025, 5, 25, 12, 0, 0)
+            .single()
+            .context("Invalid timestamp")?
+            .timestamp() as u64;
 
         let transfers = vec![
             Transfer {
@@ -70,23 +83,32 @@ mod tests {
             },
         ];
 
-        let stats = calculate_user_stats(&transfers).context("Failed to calculate user stats").unwrap();
+        let stats = calculate_user_stats(&transfers).context("Failed to calculate user stats")?;
 
         for stat in &stats {
             assert!(stat.total_volume > 0.0);
         }
 
-        let bob_stats = stats.iter().find(|s| s.address == "Bob").context("Bob stats not found").unwrap();
+        let bob_stats = stats.iter()
+            .find(|s| s.address == "Bob")
+            .context("Bob stats not found")?;
         assert_eq!(bob_stats.avg_buy_price, 5.0);
         assert_eq!(bob_stats.avg_sell_price, 6.0);
 
-        let charlie_stats = stats.iter().find(|s| s.address == "Charlie").context("Charlie stats not found").unwrap();
+        let charlie_stats = stats.iter()
+            .find(|s| s.address == "Charlie")
+            .context("Charlie stats not found")?;
         assert!(charlie_stats.max_balance >= 0.0);
+
+        Ok(())
     }
 
     #[test]
-    fn test_max_balance_calculation() {
-        let base_ts = Utc.with_ymd_and_hms(2025, 5, 25, 12, 0, 0).unwrap().timestamp() as u64;
+    fn test_max_balance_calculation() -> anyhow::Result<()> {
+        let base_ts = Utc.with_ymd_and_hms(2025, 5, 25, 12, 0, 0)
+            .single()
+            .context("Invalid timestamp")?
+            .timestamp() as u64;
 
         let transfers = vec![
             Transfer {
@@ -112,10 +134,14 @@ mod tests {
             },
         ];
 
-        let stats = calculate_user_stats(&transfers).context("Failed to calculate user stats").unwrap();
+        let stats = calculate_user_stats(&transfers).context("Failed to calculate user stats")?;
 
-        let a_stats = stats.iter().find(|s| s.address == "A").context("A stats not found").unwrap();
+        let a_stats = stats.iter()
+            .find(|s| s.address == "A")
+            .context("A stats not found")?;
 
         assert!(a_stats.max_balance >= 0.0);
+
+        Ok(())
     }
 }

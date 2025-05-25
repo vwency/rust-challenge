@@ -36,7 +36,15 @@ fn test_thread_safety() -> Result<()> {
 
     let mut all_transfers = Vec::new();
     for handle in handles {
-        let transfers = handle.join().unwrap()?;
+        let result = handle.join();
+        let transfers = match result {
+            Ok(inner_result) => {
+                inner_result.context("Transfer generation failed")?
+            }
+            Err(e) => {
+                anyhow::bail!("Thread panicked: {:?}", e);
+            }
+        };
         assert_eq!(transfers.len(), 100);
         all_transfers.extend(transfers);
     }
@@ -142,3 +150,4 @@ fn test_multiple_generators_independence() -> Result<()> {
     }
     Ok(())
 }
+ 
