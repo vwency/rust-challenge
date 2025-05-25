@@ -1,3 +1,19 @@
+## unit-test
+```aiignore
+cargo test
+```
+## Start
+```aiignore
+podman-compose up --build
+```
+```aiignore
+docker-compose up --build
+```
+## Clickhouse url
+```aiignore
+default@localhost:8123/default (http)
+```
+
 ## Инструкция
 
 - ставим star (звёздочка на репе)
