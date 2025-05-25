@@ -1,5 +1,5 @@
 use std::collections::HashSet;
-use crate::generator::address::rand_address;
+use mycrate::generator::address::rand_address;
 
 #[test]
 fn test_address_format() {

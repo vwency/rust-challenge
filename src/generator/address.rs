@@ -1,10 +1,11 @@
-use rand::{distributions::Alphanumeric, Rng};
+use rand::Rng;
 
-pub fn rand_address(rng: &mut impl Rng) -> String {
-    let suffix: String = rng
-        .sample_iter(&Alphanumeric)
-        .take(40)
-        .map(char::from)
-        .collect();
-    format!("0x{}", suffix)
+pub fn rand_address<R: Rng + ?Sized>(rng: &mut R) -> String {
+    let bytes: [u8; 20] = rng.gen();
+
+    let hex_str = bytes.iter()
+        .map(|b| format!("{:02x}", b))
+        .collect::<String>();
+
+    format!("0x{}", hex_str)
 }
