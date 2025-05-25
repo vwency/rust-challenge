@@ -8,6 +8,7 @@ use crate::metrics::calculate_user_stats;
 use generator::generate_transfers;
 use std::env;
 use std::sync::Arc;
+use clickhouse::Client;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -19,25 +20,27 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let use_mock = env::var("USE_MOCK").unwrap_or_else(|_| "false".to_string()) == "true";
 
-    if use_mock {
+    let storage: Arc<dyn Storage> = if use_mock {
         println!("\nИспользуем мок-хранилище...");
-        let storage = Arc::new(MockStorage::new());
-        run_with_storage(storage, &transfers).await?;
+        Arc::new(MockStorage::new())
     } else {
         println!("\nПытаемся подключиться к ClickHouse...");
-        match ClickHouseStorage::new("tcp://clickhouse:9000").await {
+        let client = Client::default().with_url("http://clickhouse:8123");
+
+        match ClickHouseStorage::new(client).await {
             Ok(storage) => {
                 println!("Подключение к ClickHouse успешно!");
-                run_with_storage(Arc::new(storage), &transfers).await?;
+                Arc::new(storage)
             }
             Err(e) => {
                 println!("Ошибка подключения к ClickHouse: {}", e);
                 println!("Переходим на мок-хранилище...");
-                let storage = Arc::new(MockStorage::new());
-                run_with_storage(storage, &transfers).await?;
+                Arc::new(MockStorage::new())
             }
         }
-    }
+    };
+
+    run_with_storage(storage, &transfers).await?;
 
     Ok(())
 }

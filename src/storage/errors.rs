@@ -1,12 +1,11 @@
 use thiserror::Error;
-use clickhouse_rs::errors::Error as ClickHouseError;
+use clickhouse::error::Error as ClickhouseError;
 
 #[derive(Error, Debug)]
 pub enum StorageError {
     #[error("ClickHouse error: {0}")]
-    ClickHouse(#[from] ClickHouseError),
+    ClickHouse(#[from] ClickhouseError),
 
-    #[allow(dead_code)]
     #[error("Storage error: {0}")]
     Generic(String),
 }
