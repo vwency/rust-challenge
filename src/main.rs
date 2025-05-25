@@ -44,7 +44,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 async fn run_with_storage(
     storage: Arc<dyn Storage>,
-    transfers: &[crate::model::Transfer],
+    transfers: &[model::Transfer],
 ) -> Result<(), Box<dyn std::error::Error>> {
     println!("Сохраняем трансферы...");
     storage.save_transfers(transfers).await?;
