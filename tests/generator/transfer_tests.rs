@@ -25,22 +25,18 @@ fn test_transfer_generator_basic() {
     assert_eq!(transfers.len(), 20);
 
     for transfer in &transfers {
-        // Test amount is within range
         assert!(transfer.amount >= config.min_amount);
         assert!(transfer.amount <= config.max_amount);
 
-        // Test price is within range
         assert!(transfer.usd_price >= config.min_price);
         assert!(transfer.usd_price <= config.max_price);
 
-        // Test addresses are properly formatted
         assert!(transfer.from.starts_with("0x"));
         assert!(transfer.to.starts_with("0x"));
         assert_eq!(transfer.from.len(), 42);
         assert_eq!(transfer.to.len(), 42);
         assert_ne!(transfer.from, transfer.to);
 
-        // Test values are reasonable
         assert!(transfer.amount > 0.0);
         assert!(transfer.usd_price > 0.0);
         assert!(transfer.amount.is_finite());

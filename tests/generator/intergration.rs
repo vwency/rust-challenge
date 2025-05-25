@@ -11,7 +11,6 @@ fn test_large_scale_generation() {
     let transfers = generate_transfers(10000);
     assert_eq!(transfers.len(), 10000);
 
-    // Spot check random transfers
     let config = TransferGenConfig::default();
     for i in [0, 100, 5000, 9999] {
         let transfer = &transfers[i];
@@ -41,7 +40,6 @@ fn test_thread_safety() {
 
     assert_eq!(all_transfers.len(), 400);
 
-    // Verify all transfers are valid
     for transfer in &all_transfers {
         assert!(transfer.from.starts_with("0x"));
         assert!(transfer.to.starts_with("0x"));
@@ -60,19 +58,17 @@ fn test_address_diversity() {
         unique_addresses.insert(&transfer.to);
     }
 
-    // Should have good diversity (at least 150 unique addresses out of 200)
     assert!(unique_addresses.len() >= 150);
 }
 
 #[test]
 fn test_end_to_end_workflow() {
-    // Complete workflow test
     let config = TransferGenConfig {
         min_amount: 10.0,
         max_amount: 100.0,
         min_price: 0.5,
         max_price: 5.0,
-        max_age_secs: 7200, // 2 hours
+        max_age_secs: 7200,
     };
 
     let generator = DefaultTransferGenerator::new(config.clone());
@@ -88,17 +84,14 @@ fn test_end_to_end_workflow() {
     let mut unique_addresses = HashSet::new();
 
     for transfer in &transfers {
-        // Value constraints
         assert!(transfer.amount >= config.min_amount);
         assert!(transfer.amount < config.max_amount);
         assert!(transfer.usd_price >= config.min_price);
         assert!(transfer.usd_price < config.max_price);
 
-        // Time constraints
         assert!(transfer.ts <= now);
         assert!(transfer.ts >= now - config.max_age_secs);
 
-        // Address constraints
         assert!(transfer.from.starts_with("0x"));
         assert!(transfer.to.starts_with("0x"));
         assert_eq!(transfer.from.len(), 42);
@@ -109,7 +102,6 @@ fn test_end_to_end_workflow() {
         unique_addresses.insert(&transfer.to);
     }
 
-    // Address diversity check
     assert!(unique_addresses.len() >= 40);
 }
 
@@ -130,11 +122,9 @@ fn test_multiple_generators_independence() {
     let transfers1 = gen1.generate(10);
     let transfers2 = gen2.generate(10);
 
-    // Both should work independently
     assert_eq!(transfers1.len(), 10);
     assert_eq!(transfers2.len(), 10);
 
-    // Check that they follow their respective configs
     for transfer in &transfers1 {
         assert!(transfer.amount >= config1.min_amount);
         assert!(transfer.amount <= config1.max_amount);
