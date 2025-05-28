@@ -3,7 +3,7 @@ use crate::model::{Transfer, UserStats};
 use crate::storage::errors::StorageError;
 
 #[async_trait]
-pub trait Storage: Send + Sync {
+pub trait Storage {
     async fn save_transfers(&self, transfers: &[Transfer]) -> Result<(), StorageError>;
     async fn save_stats(&self, stats: &[UserStats]) -> Result<(), StorageError>;
     async fn get_stats(&self) -> Result<Vec<UserStats>, StorageError>;

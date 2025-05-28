@@ -70,7 +70,7 @@ async fn save_transfers(
 async fn calculate_and_save_statistics(
     storage: &Arc<dyn Storage>,
     transfers: &[model::Transfer],
-) -> Result<Vec<crate::model::UserStats>, Box<dyn std::error::Error>> {
+) -> Result<Vec<model::UserStats>, Box<dyn std::error::Error>> {
     println!("Расчет метрик...");
     let stats = calculate_user_stats(transfers)?;
     println!("✓ Рассчитано метрик для {} адресов", stats.len());

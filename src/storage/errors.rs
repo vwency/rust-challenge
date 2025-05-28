@@ -1,17 +1,16 @@
 use thiserror::Error;
-use clickhouse::error::Error as ClickhouseError;
 
 #[derive(Error, Debug)]
 pub enum StorageError {
     #[error("ClickHouse error: {0}")]
-    ClickHouse(#[from] ClickhouseError),
+    ClickHouse(#[from] clickhouse::error::Error),
 
-    #[error("Storage error: {0}")]
-    Generic(String),
-}
+    #[error("Event Store error: {0}")]
+    EventStore(String),
 
-impl From<anyhow::Error> for StorageError {
-    fn from(error: anyhow::Error) -> Self {
-        StorageError::Generic(error.to_string())
-    }
+    #[error("Projection error: {0}")]
+    Projection(String),
+
+    #[error("Query error: {0}")]
+    Query(String),
 }
