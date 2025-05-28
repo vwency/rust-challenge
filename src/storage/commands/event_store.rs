@@ -13,7 +13,6 @@ pub struct ClickHouseEventStore {
 
 impl ClickHouseEventStore {
     pub async fn new(client: Client) -> Result<Self, StorageError> {
-        // Создать таблицу events, если еще нет
         client.query(r#"
             CREATE TABLE IF NOT EXISTS events (
                 aggregate_id String,
@@ -30,14 +29,10 @@ impl ClickHouseEventStore {
 #[async_trait]
 impl EventStore for ClickHouseEventStore {
     async fn append_events(&self, aggregate_id: &str, events: &[Event]) -> Result<(), StorageError> {
-        // сериализуем события и вставляем в таблицу events
-        // ...
         Ok(())
     }
 
     async fn load_events(&self, aggregate_id: &str) -> Result<Vec<Event>, StorageError> {
-        // читаем события по aggregate_id и десериализуем
-        // ...
         Ok(vec![])
     }
 }
