@@ -1,5 +1,3 @@
-pub mod config;
-
 #[cfg(test)]
 pub mod address_test;
 

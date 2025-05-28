@@ -1,10 +1,10 @@
 mod model;
 mod generator;
 mod storage;
-mod metrics;
+mod pipeline;
 
 use storage::{ClickHouseStorage, MockStorage, Storage};
-use crate::metrics::calculate_user_stats;
+use crate::pipeline::calculate_user_stats;
 use generator::generate_transfers;
 use std::env;
 use std::sync::Arc;

@@ -79,7 +79,7 @@ pub fn calculate_user_stats(transfers: &[Transfer]) -> Result<Vec<UserStats>> {
             max_balances_7d.insert(addr.clone(), max_7d);
         }
     }
-    
+
     let all_addresses: HashSet<_> = buy_prices.keys().chain(sell_prices.keys()).cloned().collect();
 
     let user_stats = all_addresses

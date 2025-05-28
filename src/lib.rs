@@ -1,3 +1,3 @@
 pub mod generator;
-pub mod metrics;
+pub mod pipeline;
 pub mod model;

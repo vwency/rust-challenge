@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod tests {
     use chrono::{Utc, TimeZone};
-    use mycrate::metrics::calculate_user_stats;
+    use mycrate::pipeline::calculate_user_stats;
     use mycrate::model::{Transfer};
     use anyhow::Context;
 

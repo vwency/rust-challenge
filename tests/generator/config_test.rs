@@ -1,4 +1,4 @@
-use crate::generator::config::TransferGenConfig;
+use mycrate::generator::config::TransferGenConfig;
 
 #[test]
 fn test_default_config() {
