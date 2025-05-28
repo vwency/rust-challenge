@@ -3,7 +3,7 @@ use mycrate::generator::address::rand_address;
 
 #[test]
 fn test_address_format() {
-    let mut rng = rand::thread_rng();
+    let mut rng = rand::rng();
     let addr = rand_address(&mut rng);
 
     assert!(addr.starts_with("0x"));
@@ -15,7 +15,7 @@ fn test_address_format() {
 
 #[test]
 fn test_address_uniqueness() {
-    let mut rng = rand::thread_rng();
+    let mut rng = rand::rng();
     let mut addresses = HashSet::new();
 
     for _ in 0..1000 {
@@ -28,7 +28,7 @@ fn test_address_uniqueness() {
 
 #[test]
 fn test_address_randomness() {
-    let mut rng = rand::thread_rng();
+    let mut rng = rand::rng();
     let addr1 = rand_address(&mut rng);
     let addr2 = rand_address(&mut rng);
 
