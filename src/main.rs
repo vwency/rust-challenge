@@ -3,86 +3,113 @@ mod generator;
 mod storage;
 mod pipeline;
 
-use storage::{ClickHouseStorage, MockStorage, Storage};
-use crate::pipeline::calculate_user_stats;
-use generator::generate_transfers;
 use std::env;
 use std::sync::Arc;
+
 use clickhouse::Client;
+
+use crate::generator::generate_transfers;
+use crate::pipeline::calculate_user_stats;
+use crate::storage::{ClickHouseStorage, MockStorage, Storage};
+
+const DEFAULT_TRANSFERS_COUNT: usize = 10_000;
+const CLICKHOUSE_URL: &str = "http://clickhouse:8123";
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    println!("=== Сервис анализа трансферов токенов ===\n");
+    print_header();
 
-    println!("Генерируем тестовые данные...");
-    let transfers = generate_transfers(10000)?;
-    println!("Сгенерировано {} трансферов", transfers.len());
+    let transfers = generate_test_data(DEFAULT_TRANSFERS_COUNT)?;
+    let storage = initialize_storage().await;
 
-    let use_mock = env::var("USE_MOCK").unwrap_or_else(|_| "false".to_string()) == "true";
-
-    let storage: Arc<dyn Storage> = if use_mock {
-        println!("\nИспользуем мок-хранилище...");
-        Arc::new(MockStorage::new())
-    } else {
-        println!("\nПытаемся подключиться к ClickHouse...");
-        let client = Client::default().with_url("http://clickhouse:8123");
-
-        match ClickHouseStorage::new(client).await {
-            Ok(storage) => {
-                println!("Подключение к ClickHouse успешно!");
-                Arc::new(storage)
-            }
-            Err(e) => {
-                println!("Ошибка подключения к ClickHouse: {}", e);
-                println!("Переходим на мок-хранилище...");
-                Arc::new(MockStorage::new())
-            }
-        }
-    };
-
-    run_with_storage(storage, &transfers).await?;
+    run_analysis(storage, &transfers).await?;
 
     Ok(())
 }
 
-async fn run_with_storage(
+fn print_header() {
+    println!("=== Сервис анализа трансферов токенов ===\n");
+}
+
+fn generate_test_data(count: usize) -> Result<Vec<model::Transfer>, Box<dyn std::error::Error>> {
+    println!("Генерируем тестовые данные...");
+
+    let transfers = generate_transfers(count)?;
+    println!("Сгенерировано {} трансферов\n", transfers.len());
+
+    Ok(transfers)
+}
+
+async fn initialize_storage() -> Arc<dyn Storage> {
+    let use_mock = should_use_mock_storage();
+
+    if use_mock {
+        println!("Использование мок-хранилища...");
+        return Arc::new(MockStorage::new());
+    }
+
+    println!("Попытка подключения к ClickHouse...");
+
+    match create_clickhouse_storage().await {
+        Ok(storage) => {
+            println!("✓ Подключение к ClickHouse успешно!\n");
+            Arc::new(storage)
+        }
+        Err(error) => {
+            println!("✗ Ошибка подключения к ClickHouse: {}", error);
+            println!("Переход на мок-хранилище...\n");
+            Arc::new(MockStorage::new())
+        }
+    }
+}
+
+fn should_use_mock_storage() -> bool {
+    env::var("USE_MOCK")
+        .unwrap_or_else(|_| "false".to_string())
+        .to_lowercase() == "true"
+}
+
+async fn create_clickhouse_storage() -> Result<ClickHouseStorage, Box<dyn std::error::Error>> {
+    let client = Client::default().with_url(CLICKHOUSE_URL);
+    ClickHouseStorage::new(client).await.map_err(|e| e.into())
+}
+
+async fn run_analysis(
     storage: Arc<dyn Storage>,
     transfers: &[model::Transfer],
 ) -> Result<(), Box<dyn std::error::Error>> {
-    println!("Сохраняем трансферы...");
-    storage.save_transfers(transfers).await?;
-
-    println!("Рассчитываем метрики...");
-    let stats = calculate_user_stats(transfers)?;
-    println!("Рассчитано метрик для {} адресов", stats.len());
-
-    println!("Сохраняем статистику...");
-    storage.save_stats(&stats).await?;
-
-    println!("Читаем статистику из хранилища...");
-    let saved_stats = storage.get_stats().await?;
-
-    println!("\n=== ТОП-10 адресов по объему ===");
-    for (i, stat) in saved_stats.iter().take(10).enumerate() {
-        println!("{}. Адрес: {}", i + 1, &stat.address[..10]);
-        println!("   Общий объем: {:.2}", stat.total_volume);
-        println!("   Средняя цена покупки: {:.4}", stat.avg_buy_price);
-        println!("   Средняя цена продажи: {:.4}", stat.avg_sell_price);
-        println!("   Максимальный баланс: {:.2}\n", stat.max_balance);
-    }
-
-    println!("Всего обработано адресов: {}", saved_stats.len());
-
-    let total_volume: f64 = saved_stats.iter().map(|s| s.total_volume).sum();
-    let avg_volume: f64 = if !saved_stats.is_empty() {
-        total_volume / saved_stats.len() as f64
-    } else {
-        0.0
-    };
-
-    println!("\n=== ОБЩАЯ СТАТИСТИКА ===");
-    println!("Общий объем всех операций: {:.2}", total_volume);
-    println!("Средний объем на адрес: {:.2}", avg_volume);
+    save_transfers(&storage, transfers).await?;
+    
+    let _stats = calculate_and_save_statistics(&storage, transfers).await?;
+    
+    let _saved_stats = storage.get_stats().await?;
+    println!("Анализ завершен успешно!");
 
     Ok(())
+}
+
+async fn save_transfers(
+    storage: &Arc<dyn Storage>,
+    transfers: &[model::Transfer],
+) -> Result<(), Box<dyn std::error::Error>> {
+    println!("Сохранение трансферов...");
+    storage.save_transfers(transfers).await?;
+    println!("✓ Трансферы сохранены");
+
+    Ok(())
+}
+
+async fn calculate_and_save_statistics(
+    storage: &Arc<dyn Storage>,
+    transfers: &[model::Transfer],
+) -> Result<Vec<crate::model::UserStats>, Box<dyn std::error::Error>> {
+    println!("Расчет метрик...");
+    let stats = calculate_user_stats(transfers)?;
+    println!("✓ Рассчитано метрик для {} адресов", stats.len());
+
+    println!("Сохранение статистики...");
+    storage.save_stats(&stats).await?;
+    println!("✓ Статистика сохранена\n");
+
+    Ok(stats)
 }
